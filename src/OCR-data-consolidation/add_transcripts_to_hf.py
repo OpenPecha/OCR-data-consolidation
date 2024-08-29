@@ -6,27 +6,33 @@ import os
 import csv
 from PIL import Image
 import pyewts
+from bdrc import get_instance_info
 
+work_info = {}
 
 converter = pyewts.pyewts()
 
 print(os.environ.get('HF_HOME'))
 
 def get_data_df(csv_file, group):
-    all_images = (Path(f"./data/{group}/all_images.txt").read_text()).splitlines()
     texts = []
+    curr_info = {}
     csv_data = pd.read_csv(csv_file)
     for _, row in csv_data.iterrows():
-        filename = row['image_name']
-        label = row['label']
-        image_url = row['image_url']
-        char_len = row['char_len']
-        # dimension = row['dimension']
         work_id = row['work_id']
-        script = row['script']
-        print_method = row['print_method']
-        texts.append((filename, label, image_url, char_len, work_id, script, print_method))
-    df = pd.DataFrame(texts, columns=['filename', 'label', 'url', 'char_len', 'work_id', 'script', 'print_method'])
+        if work_id not in work_info.keys():
+            curr_info = get_instance_info(f"M{work_id}")
+            if curr_info:
+                work_info.update(curr_info)
+                curr_info = {}
+        script = work_info[work_id]['script']
+        print_method = work_info[work_id]['printMethod']
+        filename = row['image_name']
+        label = row['text']
+        image_url = get_image_url(filename)
+        char_len = len(label)
+        texts.append((filename, label, image_url, work_id, char_len, script, print_method))
+    df = pd.DataFrame(texts, columns=['filename', 'label', 'url', 'work_id', 'char_len', 'script', 'print_method'])
     return df
     
 
@@ -49,10 +55,11 @@ def get_image_url(image_name):
 
 
 def get_image_dimension(group, image_name):
-    if group == "derge_tenjur":
-        image_path = f"/Users/tashitsering/Desktop/Work/hugging_face/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/hub/datasets--Eric-23xd--DergeTenjur/snapshots/012d522bbc301ec26679eecb06b18935533ee896/lines/{image_name}"
-    else:
-        image_path = f"./data/{group}/lines/{image_name}"
+    # if group == "derge_tenjur":
+    #     image_path = f"/Users/tashitsering/Desktop/lines/{group}/{image_name}"
+    # else:
+    #     image_path = f"./data/{group}/lines/{group}/{image_name}"
+    image_path = f"/Users/tashitsering/Desktop/nobuketaka_numbers/lines/{image_name}"
     if Path(image_path).exists:
         try:
             with Image.open(image_path) as im:
@@ -73,33 +80,10 @@ def write_csv(csv_list, csv_file):
             writer.writerows(csv_list)
 
 
-def main(group):
-    csv_list = []
-    transcript_paths = list(Path(f"./data/{group}/transcriptions/").iterdir())
-    for transcript_path in transcript_paths:
-        transcript = converter.toUnicode(transcript_path.read_text(encoding='utf-8'))
-        image_name = transcript_path.stem + ".jpg"
-        image_url = get_image_url(image_name)
-        char_len = len(transcript)
-        image_dimension = get_image_dimension(group, image_name)
-        if image_dimension == None:
-            continue
-        script = "Uchan"
-        print_method = "WoodBlock"
-        curr_csv = [image_name, transcript, image_url, char_len, image_dimension, script, print_method]
-        csv_list.append(curr_csv)
-        curr_csv = []
-    csv_file = Path(f"./data/csv/{group}.csv")
-    write_csv(csv_list, csv_file)
-    # data_df = get_data_df(csv_file)
-
-
-
-
 
 
 if __name__ == "__main__":
-    data_df = get_data_df(csv_file="./norbuketaka.csv", group='lithang_kanjur')
+    data_df = get_data_df(csv_file="/Users/tashitsering/Desktop/.csv", group='lithang_kanjur')
     create_parquet(data_df)
     # group = "derge_tenjur"
     # main(group)

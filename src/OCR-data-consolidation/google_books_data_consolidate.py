@@ -79,7 +79,7 @@ def consolidate_csv(csv_path):
             else:
                 script = None
                 print_method = None
-            final_csv.append([image_name, transcript, image_url,char_len, dimension, work_id, script, print_method])
+            final_csv.append([image_name, transcript, image_url, char_len, dimension, work_id, script, print_method])
 
 
 def gather_csv(work_paths):
